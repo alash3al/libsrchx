@@ -5,11 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/blevesearch/bleve/search/query"
-
-	"github.com/imdario/mergo"
-
 	"github.com/blevesearch/bleve"
+	"github.com/blevesearch/bleve/search/query"
+	"github.com/imdario/mergo"
 	"github.com/satori/go.uuid"
 )
 
