@@ -2,6 +2,8 @@ package srchx
 
 import (
 	"errors"
+	"math"
+	"strings"
 	"time"
 
 	"github.com/blevesearch/bleve/search/query"
@@ -77,6 +79,55 @@ func (i *Index) Put(data map[string]interface{}) (document map[string]interface{
 	}
 
 	return document, nil
+}
+
+// Aggregate - aggregates (count, sum and avg) using the specified query and field
+func (i *Index) Aggregate(q *Query, field, fn string) (result float64) {
+	scroll := func(from, size int) *bleve.SearchResult {
+		searchRequest := bleve.NewSearchRequest(q.Query)
+		searchRequest.Fields = []string{field}
+		searchRequest.From = from
+		searchRequest.Size = size
+
+		res, _ := i.bleve.Search(searchRequest)
+		return res
+	}
+
+	frst := scroll(0, 1)
+	if nil == frst || frst.Total < 1 {
+		return 0
+	}
+
+	switch strings.ToLower(fn) {
+	case "count":
+		result = float64(frst.Total)
+	case "sum":
+		all := scroll(0, math.MaxInt32)
+		if nil != all && all.Total > 0 {
+			for _, doc := range all.Hits {
+				val, ok := doc.Fields[field].(float64)
+				if !ok {
+					continue
+				}
+				result += val
+			}
+		}
+	case "avg":
+		all := scroll(0, math.MaxInt32)
+		sum := float64(0)
+		if nil != all && all.Total > 0 {
+			for _, doc := range all.Hits {
+				val, ok := doc.Fields[field].(float64)
+				if !ok {
+					continue
+				}
+				sum += val
+			}
+		}
+		result = sum / float64(frst.Total)
+	}
+
+	return result
 }
 
 // Search - search in the index for the specified query
